@@ -111,22 +111,22 @@ def make_side_by_side(freqs = 1,amps = 1,phase_offsets = 0,period = 0, duration 
         duration = 10 * period
     
     if amps.shape[0] != freqs.shape[0]:
-        if amps.shape[0] != 0 and not np.iscomplexobj(amps):
+        if amps.shape[0] != 0 and amps.shape[0] != 1 and not np.iscomplexobj(amps):
             print('Incorrect shape for amplitudes array, setting random amplitudes.')
         amps = np.ones(freqs.shape[0])
         for i_freq in range(freqs.shape[0])[1:]:
             amps[i_freq] = 0.9 * random.random()
-    
+ 
     if phase_offsets.shape[0] != freqs.shape[0]:
-        if phase_offsets.shape[0] != 0 and not np.iscomplexobj(amps):
+        if phase_offsets.shape[0] != 0 and phase_offsets.shape[0] != 1:
             print('Incorrect shape for phase offset array, setting random phases.')
         phase_offsets = np.zeros(freqs.shape[0])
         for i_freq in range(freqs.shape[0]):
             phase_offsets[i_freq] = random.random()
-            
+     
     if line_alphas.shape[0] != freqs.shape[0]:
-        if line_alphas.shape[0] != 0 and not np.iscomplexobj(amps):
-            print('Incorrect shape for phase offset array, setting random phases.')
+        if line_alphas.shape[0] != 0 and line_alphas.shape[0] != 1:
+            print('Incorrect shape for line opacity array, setting them all to 1.')
         line_alphas = np.ones(freqs.shape[0])
     
     if max_freq == 0:
@@ -152,24 +152,24 @@ def make_side_by_side(freqs = 1,amps = 1,phase_offsets = 0,period = 0, duration 
         if np.iscomplexobj(amps):
             yt += (1 / len(xt) ) * ( np.real(amps[i_freq]) * np.cos( 2 * np.pi * freqs[i_freq] * xt ) - np.imag(amps[i_freq]) * np.sin( 2 * np.pi * freqs[i_freq] * xt ) )
             yf += (1 / len(xt) ) * np.abs(amps[i_freq]) * np.exp( -(freqs[i_freq] - xf) ** 2 / peak_width )
-            ax[1].plot(freqs[i_freq],(1 / len(xt) ) * np.abs(amps[i_freq]),'o',markersize=10,zorder = 1,color = colors[i_iter + i_freq%len(colors)],alpha = line_alphas[i_freq])
+            ax[1].plot(freqs[i_freq],(1 / len(xt) ) * np.abs(amps[i_freq]),'o',markersize=10,zorder = 1,color = colors[(i_iter + i_freq)%len(colors)],alpha = line_alphas[i_freq])
         else:
             yt += amps[i_freq] * np.sin( 2 * np.pi * freqs[i_freq] * (xt+phase_offsets[i_freq]) )
             yf += np.abs(amps[i_freq]) * np.exp( -(freqs[i_freq] - xf) ** 2 / peak_width )
-            ax[1].plot(freqs[i_freq],np.abs(amps[i_freq]),'o',markersize=10,zorder = 1,color = colors[i_iter + i_freq%len(colors)],alpha = line_alphas[i_freq])
+            ax[1].plot(freqs[i_freq],np.abs(amps[i_freq]),'o',markersize=10,zorder = 1,color = colors[(i_iter + i_freq)%len(colors)],alpha = line_alphas[i_freq])
 
         if show_pure and freqs.shape[0] > 1:
             if np.iscomplexobj(amps):
-                ax[0].plot( xt,(1 / len(xt) ) * ( np.real(amps[i_freq]) * np.cos( 2 * np.pi * freqs[i_freq] * xt ) - np.imag(amps[i_freq]) * np.sin( 2 * np.pi * freqs[i_freq] * xt ) ), color = colors[i_iter + i_freq%len(colors)], alpha = line_alphas[i_freq] )
+                ax[0].plot( xt,(1 / len(xt) ) * ( np.real(amps[i_freq]) * np.cos( 2 * np.pi * freqs[i_freq] * xt ) - np.imag(amps[i_freq]) * np.sin( 2 * np.pi * freqs[i_freq] * xt ) ), color = colors[(i_iter + i_freq)%len(colors)], alpha = line_alphas[i_freq] )
             else:
-                ax[0].plot( xt,amps[i_freq] * np.sin( 2 * np.pi * freqs[i_freq] * (xt+phase_offsets[i_freq]) ), color = colors[i_iter + i_freq%len(colors)], alpha = line_alphas[i_freq] )
+                ax[0].plot( xt,amps[i_freq] * np.sin( 2 * np.pi * freqs[i_freq] * (xt+phase_offsets[i_freq]) ), color = colors[(i_iter + i_freq)%len(colors)], alpha = line_alphas[i_freq] )
     if show_pure:    
         ax[0].plot(xt,yt,color = 'k', linewidth = 3)
     else:
         if freqs.shape[0]==1 and thick_single_line:
             ax[0].plot(xt,yt,color = 'k', linewidth = 3)
         else:
-            ax[0].plot(xt,yt,color = colors[i_iter + i_freq%len(colors)] )
+            ax[0].plot(xt,yt,color = colors[(i_iter + i_freq)%len(colors)] )
         
     ax[1].plot(xf,yf,color = 'k', zorder=0)
                                     
@@ -211,7 +211,22 @@ def make_side_by_side(freqs = 1,amps = 1,phase_offsets = 0,period = 0, duration 
     ax[1].set_title( '\"Frequency representation\"')
     
     
-def make_complex_tone(n_tones = 3, lowest_freq = 1, pitched = True):
+def make_complex_tone(n_tones = 3, lowest_freq = 1., pitched = True):
+    
+    if float(lowest_freq)==0:
+        print("Invalid lowest frequency. Setting it to default (1).")
+        lowest_freq = 1.
+    elif float(lowest_freq)<0:
+        print("Lowest freq is negative. Taking the absolute value.")
+        lowest_freq = -1 * float(lowest_freq)
+    else:
+        lowest_freq = float(lowest_freq)
+    
+    if int(n_tones)<=0:
+        print("Invalid number of pure tones. Setting to default (3).")
+        n_tones = 3
+    else:
+        n_tones = int(n_tones)
     
     freqs = lowest_freq * np.ones(n_tones)
     amps = np.ones(n_tones)
@@ -235,7 +250,18 @@ def make_complex_tone(n_tones = 3, lowest_freq = 1, pitched = True):
     make_side_by_side(freqs,amps,phase_offsets,duration = 10 * 1 / freqs[0],max_amp = max_amp,max_freq = freqs[-1] + freqs[0],rectangles = pitched)
     
     
-def process_drawing(drawing, n_freqs_to_plot = 10, one_by_one=False, start = 0, stop = 1, n_points = 10000):
+def process_drawing(drawing = np.zeros([1,1]), n_freqs_to_plot = 10, one_by_one=True, start = 0, stop = 1, n_points = 10000):
+    
+    print(drawing.shape)
+    if drawing.shape == (1,1):
+        print("You didn't draw anything! Doing a straight line.")
+        drawing = np.array([np.linspace(0,1,10000),np.linspace(-1,1,10000)])
+
+    if int(n_freqs_to_plot)<=0:
+        print("Invalid number of pure tones. Setting to default (10).")
+        n_freqs_to_plot = 10
+    else:
+        n_freqs_to_plot = int(n_freqs_to_plot)
 
 
     x = drawing[0,:]
